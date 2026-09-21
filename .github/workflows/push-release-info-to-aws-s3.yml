@@ -1,0 +1,84 @@
+name: Push Release Info to AWS S3
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      product:
+        required: true
+        type: string
+      bucket:
+        required: true
+        type: string
+jobs:
+  push-release-info-to-aws-s3:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5.1.1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESSKEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRETKEY }}
+          aws-region: us-west-2
+      - name: Push release info to S3
+        run: |
+          $product = "${{ inputs.product }}"
+
+          try {
+              $response = Invoke-WebRequest -Uri https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ inputs.version }} -UseBasicParsing
+          }
+          catch {
+              Write-Error "Failed to fetch release ${{ inputs.version }}: $($_.Exception.Message)"
+              exit 1
+          }
+
+          # Filter and rework the JSON
+          $obj = ConvertFrom-Json $response.Content -ErrorAction Stop
+
+          if ($obj.Draft -or $obj.Prerelease) {
+              Write-Error "Release $($obj.tag_name) is a draft or prerelease, aborting"
+              exit 1
+          }
+
+          $release = $obj | Select-Object -Property @{Name="tag";Expression={$_."tag_name"}}, @{Name="release";Expression={$_."html_url"}}, @{Name="published";Expression={$_."published_at"}}, assets
+          if (-not ($release.tag -match '^\d+\.\d+\.\d+$')) {
+              Write-Error "Release $($release.tag) has an invalid tag format, aborting"
+              exit 1
+          }
+          
+          $release.assets = @($release.assets | Where-Object name -Like "*.exe" | Select-Object -Property name, size, @{Name="download";Expression={$_."browser_download_url"}})
+
+          if (-not $release.assets) {
+              Write-Error "Release $($release.tag) has no exe assets, aborting"
+              exit 1
+          }
+
+          $newobj = @($release)
+          $json = ConvertTo-Json $newobj -Depth 100 -ErrorAction Stop
+
+          # Write JSON to S3
+          $bucket = "${{ inputs.bucket }}"
+          $key = "{0}.txt" -f $product.ToLower()
+          $tempFile = New-TemporaryFile
+          Set-Content -Path $tempFile -Value $json -NoNewline
+
+          aws s3 cp $tempFile "s3://$bucket/$key" --content-type application/json
+          if ($LASTEXITCODE -ne 0) {
+              Write-Error "Upload to S3 failed"
+              exit 1
+          }
+
+          # Double check upload
+          $expectedSize = ([System.Text.Encoding]::UTF8.GetByteCount($json))
+          $uploadedSize = aws s3api head-object --bucket $bucket --key $key --query ContentLength --output text
+          if ([int]$uploadedSize -ne $expectedSize) {
+              Write-Error "Content verification failed"
+              exit 1
+          }
+          else {
+              Write-Output ("Updated file now be available at http://{0}/{1} (case sensitive URL)" -f $bucket, $key)
+          }

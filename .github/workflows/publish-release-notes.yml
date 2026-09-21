@@ -1,0 +1,27 @@
+name: Publish Release Notes
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+jobs:
+  publish-release-notes:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 'latest'
+      - name: Setup GitReleaseManager
+        # https://github.com/GitTools/GitReleaseManager#net-global-tool
+        run: dotnet tool install --global GitReleaseManager.Tool
+      - name: Publish release
+        run: |
+          Write-Output "Publishing release ${{ inputs.version }} for ${{ github.event.repository.name }}"
+          dotnet-gitreleasemanager publish --token $env:GITHUB_TOKEN -o "${{ github.repository_owner }}" -r "${{ github.event.repository.name }}" -t "${{ inputs.version }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

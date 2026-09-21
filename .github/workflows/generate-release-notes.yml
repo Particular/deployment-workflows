@@ -1,0 +1,34 @@
+name: Generate Release Notes
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+jobs:
+  generate-release-notes:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Setup GitReleaseManager
+        # https://github.com/GitTools/GitReleaseManager#net-global-tool
+        run: |
+          dotnet tool install --global GitReleaseManager.Tool
+          Write-Output "`nGitReleaseManager.yaml contents:"
+          Get-Content .release/GitReleaseManager.yaml
+          Write-Output "`n`nGitReleaseManager issue-note.sbn template:"
+          Get-Content .release/.templates/default/issue-note.sbn
+      - name: Update draft release notes from milestone
+        run: |
+          Write-Output "Updating draft release body for ${{ github.event.repository.name }} ${{ inputs.version }} from milestone '${{ inputs.version }}'"
+          dotnet-gitreleasemanager create --token $env:GITHUB_TOKEN -o "${{ github.repository_owner }}" -r "${{ github.event.repository.name }}" -m "${{ inputs.version }}" -n "${{ inputs.version }}" -d .release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
