@@ -1,0 +1,49 @@
+name: Push NuGet Packages
+description: Downloads .nupkg release assets and publishes them to a NuGet feed using OIDC trusted publishing
+inputs:
+  version:
+    required: true
+    description: Release tag to download package assets from
+  exclude-package-pattern:
+    required: false
+    default: ''
+    description: Glob pattern of package filenames to exclude from the push
+  nuget-user:
+    required: true
+    description: NuGet trusted publishing user
+  nuget-source-domain:
+    required: true
+    description: NuGet feed domain used for both the trusted-publishing token service and the package source
+runs:
+  using: composite
+  steps:
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 'latest'
+    - name: Download assets from release
+      shell: pwsh
+      run: |
+        gh release download "${{ inputs.version }}" --repo "${{ github.repository }}" --pattern "*.nupkg" --dir nugets
+      env:
+        GH_TOKEN: ${{ github.token }}
+    - name: Get NuGet trusted publishing API key
+      uses: NuGet/login@v1
+      id: login
+      with:
+        user: ${{ inputs.nuget-user }}
+        token-service-url: ${{ inputs.nuget-source-domain }}/api/v2/token
+        audience: ${{ inputs.nuget-source-domain }}
+    - name: Push NuGet packages to production feed
+      shell: pwsh
+      run: |
+        $getChildItemParams = @{ Path = 'nugets/*'; Include = '*.nupkg' }
+        $excludePattern = "${{ inputs.exclude-package-pattern }}"
+        if ($excludePattern) { $getChildItemParams.Exclude = $excludePattern }
+        $packages = Get-ChildItem @getChildItemParams
+        Write-Output "Pushing $($packages.Count) NuGet package(s) to ${{ inputs.nuget-source-domain }}:"
+        $packages | ForEach-Object { Write-Output " - $($_.Name)" }
+        foreach ($package in $packages)
+        {
+          dotnet nuget push $package.FullName --source ${{ inputs.nuget-source-domain }}/api/v2/package --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+        }
