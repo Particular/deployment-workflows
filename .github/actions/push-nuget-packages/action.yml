@@ -1,5 +1,5 @@
 name: Push NuGet Packages
-description: Downloads .nupkg release assets and publishes them to a NuGet feed using OIDC trusted publishing
+description: Downloads .nupkg release assets and publishes them to a NuGet feed using OIDC trusted publishing or a static API key
 inputs:
   version:
     required: true
@@ -8,15 +8,48 @@ inputs:
     required: false
     default: ''
     description: Glob pattern of package filenames to exclude from the push
+  publish-mode:
+    required: true
+    description: How to authenticate the push. One of 'trusted-publishing' or 'api-key'
   nuget-user:
+    required: false
+    default: ''
+    description: NuGet trusted publishing user (required when publish-mode is trusted-publishing)
+  feed-url:
     required: true
-    description: NuGet trusted publishing user
-  nuget-source-domain:
-    required: true
-    description: NuGet feed domain used for both the trusted-publishing token service and the package source
+    description: >
+      NuGet package source URL, used as the push source. For publish-mode
+      'trusted-publishing' its domain also extracted to build the token
+      service URL and audience.
+  api-key:
+    required: false
+    default: ''
+    description: API key used to authenticate the push (required when publish-mode is api-key)
 runs:
   using: composite
   steps:
+    - name: Validate inputs
+      shell: pwsh
+      run: |
+        $publishMode = "${{ inputs.publish-mode }}"
+        $validModes = @('trusted-publishing', 'api-key')
+        if ($validModes -notcontains $publishMode) {
+          throw "publish-mode must be one of: $($validModes -join ', '). Got '$publishMode'."
+        }
+        if ($publishMode -eq 'trusted-publishing' -and -not "${{ inputs.nuget-user }}") {
+          throw "nuget-user is required when publish-mode is 'trusted-publishing'."
+        }
+        if ($publishMode -eq 'trusted-publishing' -and "${{ inputs.api-key }}") {
+          throw "api-key must not be set when publish-mode is 'trusted-publishing'."
+        }
+        if ($publishMode -eq 'api-key' -and -not "${{ inputs.api-key }}") {
+          throw "api-key is required when publish-mode is 'api-key'."
+        }
+        $feedUrl = "${{ inputs.feed-url }}"
+        $parsedUri = $null
+        if (-not [Uri]::TryCreate($feedUrl, [UriKind]::Absolute, [ref]$parsedUri)) {
+          throw "feed-url must be a valid absolute URL. Got '$feedUrl'."
+        }
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v6
       with:
@@ -24,26 +57,50 @@ runs:
     - name: Download assets from release
       shell: pwsh
       run: |
-        gh release download "${{ inputs.version }}" --repo "${{ github.repository }}" --pattern "*.nupkg" --dir nugets
+        $version = "${{ inputs.version }}"
+        gh release download $version --repo "${{ github.repository }}" --pattern "*.nupkg" --dir nugets 2>$null
+        if ($LASTEXITCODE -ne 0) {
+          Write-Output "Could not download release '$version' directly (likely a draft release); looking up release by name..."
+          $releases = gh api "repos/${{ github.repository }}/releases" | ConvertFrom-Json
+          $release = $releases | Where-Object { $_.name -eq $version } | Select-Object -First 1
+          if (-not $release) {
+            throw "Could not find a release named '$version'"
+          }
+          Write-Output "Found release id $($release.id) with tag '$($release.tag_name)' for '$version'"
+          gh release download $release.tag_name --repo "${{ github.repository }}" --pattern "*.nupkg" --dir nugets
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to download release assets for tag '$($release.tag_name)'"
+          }
+        }
       env:
         GH_TOKEN: ${{ github.token }}
+    - name: Resolve NuGet feed domain
+      id: resolve
+      if: inputs.publish-mode == 'trusted-publishing'
+      shell: pwsh
+      run: |
+        $domain = ([Uri]"${{ inputs.feed-url }}").GetLeftPart([System.UriPartial]::Authority)
+        Write-Output "domain=$domain" >> $env:GITHUB_OUTPUT
     - name: Get NuGet trusted publishing API key
+      if: inputs.publish-mode == 'trusted-publishing'
       uses: NuGet/login@v1
       id: login
       with:
         user: ${{ inputs.nuget-user }}
-        token-service-url: ${{ inputs.nuget-source-domain }}/api/v2/token
-        audience: ${{ inputs.nuget-source-domain }}
-    - name: Push NuGet packages to production feed
+        token-service-url: ${{ steps.resolve.outputs.domain }}/api/v2/token
+        audience: ${{ steps.resolve.outputs.domain }}
+    - name: Push NuGet packages
       shell: pwsh
       run: |
         $getChildItemParams = @{ Path = 'nugets/*'; Include = '*.nupkg' }
         $excludePattern = "${{ inputs.exclude-package-pattern }}"
         if ($excludePattern) { $getChildItemParams.Exclude = $excludePattern }
         $packages = Get-ChildItem @getChildItemParams
-        Write-Output "Pushing $($packages.Count) NuGet package(s) to ${{ inputs.nuget-source-domain }}:"
+        $source = "${{ inputs.feed-url }}"
+        $apiKey = if ("${{ inputs.publish-mode }}" -eq 'trusted-publishing') { "${{ steps.login.outputs.NUGET_API_KEY }}" } else { "${{ inputs.api-key }}" }
+        Write-Output "Pushing $($packages.Count) NuGet package(s) to $source`:"
         $packages | ForEach-Object { Write-Output " - $($_.Name)" }
         foreach ($package in $packages)
         {
-          dotnet nuget push $package.FullName --source ${{ inputs.nuget-source-domain }}/api/v2/package --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          dotnet nuget push $package.FullName --source $source --api-key $apiKey
         }
