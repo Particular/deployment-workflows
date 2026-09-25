@@ -3,7 +3,13 @@ description: Downloads .nupkg release assets and publishes them to a NuGet feed 
 inputs:
   version:
     required: true
-    description: Release tag to download package assets from
+    description: >
+      Release to download package assets from. For release-state 'published' this is
+      the release tag. For release-state 'draft' this is the release name (draft
+      releases aren't addressable by tag).
+  release-state:
+    required: true
+    description: Whether version identifies a 'published' release (by tag) or a 'draft' release (by name). One of 'published' or 'draft'
   exclude-package-pattern:
     required: false
     default: ''
@@ -36,6 +42,11 @@ runs:
         if ($validModes -notcontains $publishMode) {
           throw "publish-mode must be one of: $($validModes -join ', '). Got '$publishMode'."
         }
+        $releaseState = "${{ inputs.release-state }}"
+        $validReleaseStates = @('published', 'draft')
+        if ($validReleaseStates -notcontains $releaseState) {
+          throw "release-state must be one of: $($validReleaseStates -join ', '). Got '$releaseState'."
+        }
         if ($publishMode -eq 'trusted-publishing' -and -not "${{ inputs.nuget-user }}") {
           throw "nuget-user is required when publish-mode is 'trusted-publishing'."
         }
@@ -54,23 +65,31 @@ runs:
       uses: actions/setup-dotnet@v6
       with:
         dotnet-version: 'latest'
-    - name: Download assets from release
+    - name: Download assets from published release
+      if: inputs.release-state == 'published'
       shell: pwsh
       run: |
         $version = "${{ inputs.version }}"
-        gh release download $version --repo "${{ github.repository }}" --pattern "*.nupkg" --dir nugets 2>$null
+        gh release download $version --repo "${{ github.repository }}" --pattern "*.nupkg" --dir nugets
         if ($LASTEXITCODE -ne 0) {
-          Write-Output "Could not download release '$version' directly (likely a draft release); looking up release by name..."
-          $releases = gh api "repos/${{ github.repository }}/releases" | ConvertFrom-Json
-          $release = $releases | Where-Object { $_.name -eq $version } | Select-Object -First 1
-          if (-not $release) {
-            throw "Could not find a release named '$version'"
-          }
-          Write-Output "Found release id $($release.id) with tag '$($release.tag_name)' for '$version'"
-          gh release download $release.tag_name --repo "${{ github.repository }}" --pattern "*.nupkg" --dir nugets
-          if ($LASTEXITCODE -ne 0) {
-            throw "Failed to download release assets for tag '$($release.tag_name)'"
-          }
+          throw "Failed to download release assets for tag '$version'"
+        }
+      env:
+        GH_TOKEN: ${{ github.token }}
+    - name: Download assets from draft release
+      if: inputs.release-state == 'draft'
+      shell: pwsh
+      run: |
+        $name = "${{ inputs.version }}"
+        $releases = gh api "repos/${{ github.repository }}/releases" | ConvertFrom-Json
+        $release = $releases | Where-Object { $_.name -eq $name } | Select-Object -First 1
+        if (-not $release) {
+          throw "Could not find a draft release named '$name'"
+        }
+        Write-Output "Found draft release id $($release.id) with tag '$($release.tag_name)' for '$name'"
+        gh release download $release.tag_name --repo "${{ github.repository }}" --pattern "*.nupkg" --dir nugets
+        if ($LASTEXITCODE -ne 0) {
+          throw "Failed to download release assets for tag '$($release.tag_name)'"
         }
       env:
         GH_TOKEN: ${{ github.token }}
