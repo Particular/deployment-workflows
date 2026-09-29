@@ -1,5 +1,5 @@
-name: Determine container tags
-description: Determine the container tags for this release
+name: Determine image tags
+description: Determine the image tags for this release
 inputs:
   version:
     description: Full version
@@ -17,16 +17,16 @@ outputs:
   prerelease:
     description: Prerelease label
     value: ${{ steps.determine.outputs.prerelease }}
-  container-tags:
-    description: Tags to be added for container releases (comma-separated)
-    value: ${{ steps.determine.outputs.container-tags }}
+  image-tags:
+    description: Tags to be added for image releases (comma-separated)
+    value: ${{ steps.determine.outputs.image-tags }}
   latest:
     description: Evaluates to `true` if the version should be flagged as the new latest version
     value: ${{ steps.determine.outputs.latest }}
 runs:
   using: composite
   steps:
-    - name: Determine container tags
+    - name: Determine image tags
       id: determine
       shell: pwsh
       run: |
@@ -80,7 +80,7 @@ runs:
             select -First 1
         Write-Output "Latest released v$major.$minor version on GitHub = $latestForMinor"
 
-        Write-Output "Determining container tags..."
+        Write-Output "Determining image tags..."
         $tags = @($version)
 
         $isLatest = $false
@@ -114,5 +114,5 @@ runs:
         $tags | ForEach-Object { Write-Output " * '$_'" }
 
         $tagsDelimited = $tags -Join ','
-        echo "container-tags=$tagsDelimited" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf-8 -Append
+        echo "image-tags=$tagsDelimited" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf-8 -Append
         echo "latest=$($isLatest.ToString().ToLower())" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf-8 -Append
