@@ -1,0 +1,19 @@
+name: CI - Actions
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/actions/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/actions/**'
+jobs:
+  test-actions:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Placeholder
+        run: echo "Placeholder for testing actions"
