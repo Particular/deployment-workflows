@@ -67,10 +67,10 @@ jobs:
           # -Compress keeps this on one line; $GITHUB_OUTPUT is line-based and a pretty-printed (multi-line) value would corrupt it.
           $imageConfigsJson = $imageConfigs | ConvertTo-Json -Compress -AsArray
           echo "image-configs=$imageConfigsJson" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf-8 -Append
-  push:
+  push-to-container-registry:
     needs: determine-image-configurations
     runs-on: ubuntu-latest
-    name: Push
+    name: Push to container registry
     defaults:
       run:
         shell: pwsh
@@ -105,7 +105,7 @@ jobs:
             Write-Output "::endgroup::"
           }
   update-descriptions:
-    needs: [determine-image-configurations, push]
+    needs: [determine-image-configurations, push-to-container-registry]
     if: ${{ needs.determine-image-configurations.outputs.latest == 'true' }}
     runs-on: ubuntu-latest
     name: Update Docker Hub description
