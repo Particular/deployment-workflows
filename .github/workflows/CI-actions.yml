@@ -20,7 +20,7 @@ jobs:
 
   validate-action-tests:
     # So we can add new tests without having to update branch protection rules
-    name: CI - Actions result
+    name: Validate action test results
     needs: [test-actions]
     if: always()
     runs-on: ubuntu-latest

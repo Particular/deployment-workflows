@@ -20,7 +20,7 @@ jobs:
 
   validate-workflow-tests:
     # So we can add new tests without having to update branch protection rules
-    name: CI - Workflows result
+    name: Validate workflow test results
     needs: [test-workflows]
     if: always()
     runs-on: ubuntu-latest
