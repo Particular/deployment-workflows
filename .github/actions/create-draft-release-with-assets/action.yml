@@ -5,16 +5,33 @@ inputs:
     default: 'nugets,assets'
     required: false
     description: Comma-separated paths where asset files are located
+  dry-run:
+    required: false
+    default: 'false'
+    description: If true, skips creating the real draft release and only logs what would have been created.
 runs:
   using: composite
   steps:
     - name: Create draft release and attach assets
+      id: create
       shell: pwsh
       run: |
         $paths = '${{ inputs.asset-paths }}' -split ',' | ForEach-Object { $_.Trim() }
         $assets = (Get-ChildItem -LiteralPath ($paths.Where({Test-Path $_})) -File -Recurse).FullName
         Write-Output "Assets to attach: $assets"
         Write-Output "Creating draft release for ${{ github.event.repository.name }} ${{ github.ref_name }} at commit ${{ github.sha }}"
-        gh release create ${{ github.ref_name }} $assets -d -n "<!-- RELEASE PENDING -->" -t "${{ github.ref_name }}"
+
+        if ('${{ inputs.dry-run }}' -eq 'true')
+        {
+          Write-Output "[dry-run] Skipping gh release create."
+        }
+        else
+        {
+          gh release create ${{ github.ref_name }} $assets -d -n "<!-- RELEASE PENDING -->" -t "${{ github.ref_name }}"
+        }
+
+        # -join keeps this on one line; $GITHUB_OUTPUT is line-based and a multi-line value would corrupt it.
+        $assetsJoined = $assets -join ','
+        echo "assets=$assetsJoined" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf-8 -Append
       env:
         GH_TOKEN: ${{ github.token }}
