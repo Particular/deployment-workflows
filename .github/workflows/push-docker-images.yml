@@ -129,7 +129,7 @@ jobs:
             Write-Output "::endgroup::"
           }
   update-descriptions:
-    needs: [determine-image-configurations, push]
+    needs: [determine-image-configurations, push-to-container-registry]
     if: ${{ needs.determine-image-configurations.outputs.latest == 'true' && !inputs.dry-run }}
     runs-on: ubuntu-latest
     name: Update Docker Hub description
