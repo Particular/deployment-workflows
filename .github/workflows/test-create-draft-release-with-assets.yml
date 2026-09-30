@@ -52,6 +52,10 @@ jobs:
             throw "A real release for '${{ github.ref_name }}' exists even though dry-run was true."
           }
           Write-Output "OK: no real release exists for '${{ github.ref_name }}'"
+
+          # gh release view above is expected to fail (exit non-zero) when no release exists - reset
+          # $LASTEXITCODE so that the expected failure doesn't show the test run as failed.
+          $global:LASTEXITCODE = 0
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Clean up test assets
