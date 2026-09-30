@@ -7,7 +7,14 @@ on:
     paths:
       - '.github/workflows/**'
 jobs:
-  test-workflows:
+  test-push-docker-images:
+    uses: ./.github/workflows/test-push-docker-images.yml
+
+  validate-workflow-tests:
+    # So we can add new tests without having to update branch protection rules
+    name: CI - Workflows result
+    needs: [test-push-docker-images]
+    if: always()
     runs-on: ubuntu-latest
     defaults:
       run:

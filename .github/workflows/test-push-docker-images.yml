@@ -1,0 +1,11 @@
+name: Test - push-docker-images
+on:
+  workflow_call:
+jobs:
+  test-valid:
+    name: valid config
+    uses: ./.github/workflows/push-docker-images.yml
+    with:
+      version: 1.2.3
+      image-config-file: test/push-docker-images/valid-multi-image.json
+      dry-run: true
