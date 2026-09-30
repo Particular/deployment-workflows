@@ -1,0 +1,88 @@
+name: Test - determine-image-tags
+on:
+  workflow_call:
+jobs:
+  test-determine-image-tags:
+    name: determine-image-tags / ${{ matrix.scenario }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scenario: release version
+            version: 9.9.9
+            expect-failure: false
+          - scenario: prerelease version
+            version: 9.9.9-beta.1
+            expect-failure: false
+          - scenario: invalid version
+            version: not-a-version
+            expect-failure: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Determine image tags
+        id: tags
+        continue-on-error: ${{ matrix.expect-failure }}
+        uses: ./.github/actions/determine-image-tags
+        with:
+          version: ${{ matrix.version }}
+      - name: Verify
+        run: |
+          $version = '${{ matrix.version }}'
+          $expectFailure = '${{ matrix.expect-failure }}' -eq 'true'
+          $outcome = '${{ steps.tags.outcome }}'
+
+          if ($expectFailure)
+          {
+            if ($outcome -ne 'failure')
+            {
+              throw "Expected determine-image-tags to fail for version '$version', but outcome was '$outcome'."
+            }
+            Write-Output "OK: failed as expected ($outcome)"
+            exit 0
+          }
+
+          if ($outcome -ne 'success')
+          {
+            throw "Expected determine-image-tags to succeed for version '$version', but outcome was '$outcome'."
+          }
+
+          $isMatch = $version -match '^(?<Major>\d+)\.(?<Minor>\d+)\.(?<Patch>\d+)(-(?<PrereleaseLabel>[\w\-\.]+))?$'
+          $expectedMajor = $Matches.Major
+          $expectedMinor = $Matches.Minor
+          $expectedPatch = $Matches.Patch
+          # Cast to [string] because GitHub actions output empty strings but unmatched groups are null
+          $expectedPrerelease = [string]$Matches.PrereleaseLabel
+
+          $major = '${{ steps.tags.outputs.major }}'
+          $minor = '${{ steps.tags.outputs.minor }}'
+          $patch = '${{ steps.tags.outputs.patch }}'
+          $prerelease = '${{ steps.tags.outputs.prerelease }}'
+          $imageTags = '${{ steps.tags.outputs.image-tags }}' -split ','
+          $latest = '${{ steps.tags.outputs.latest }}'
+
+          Write-Output "major=$major minor=$minor patch=$patch prerelease=$prerelease image-tags=$imageTags latest=$latest"
+
+          if ($major -ne $expectedMajor) { throw "Expected major '$expectedMajor', got '$major'." }
+          if ($minor -ne $expectedMinor) { throw "Expected minor '$expectedMinor', got '$minor'." }
+          if ($patch -ne $expectedPatch) { throw "Expected patch '$expectedPatch', got '$patch'." }
+          if ($prerelease -ne $expectedPrerelease) { throw "Expected prerelease '$expectedPrerelease', got '$prerelease'." }
+          if ($imageTags -notcontains $version) { throw "Expected image-tags to include the version itself ('$version'), got: $imageTags" }
+
+          if ($expectedPrerelease)
+          {
+            # Prerelease versions never get floating tags - only the version itself.
+            if ($imageTags.Count -ne 1) { throw "Expected a prerelease version to produce exactly one tag, got: $imageTags" }
+          }
+          else
+          {
+            # The action uses this repo's release history, so just make sure we see the expected values since we
+            # can't reliably test exact scenarios without making a mess of the releases
+            if ($latest -ne 'true' -and $latest -ne 'false') { throw "Expected latest to be 'true' or 'false', got '$latest'." }
+          }
+
+          Write-Output "OK"
