@@ -17,3 +17,36 @@ jobs:
     steps:
       - name: Placeholder
         run: echo "Placeholder for testing actions"
+
+  validate-action-tests:
+    # So we can add new tests without having to update branch protection rules
+    name: CI - Actions result
+    needs: [test-actions]
+    if: always()
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check all jobs succeeded
+        run: |
+          $jobs = '${{ toJSON(needs) }}' | ConvertFrom-Json
+          $failed = $false
+
+          foreach ($job in $jobs.PSObject.Properties)
+          {
+            $result = $job.Value.result
+            if ($result -ne 'success')
+            {
+              Write-Output "Job '$($job.Name)' result: $result"
+              $failed = $true
+            }
+          }
+
+          if ($failed)
+          {
+            Write-Error "One or more jobs did not succeed."
+            exit 1
+          }
+
+          Write-Output "All jobs succeeded."
