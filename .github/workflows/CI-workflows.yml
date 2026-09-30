@@ -2,8 +2,6 @@ name: CI - Workflows
 on:
   pull_request:
     branches: [main]
-    paths:
-      - '.github/workflows/**'
   push:
     branches: [main]
     paths:
