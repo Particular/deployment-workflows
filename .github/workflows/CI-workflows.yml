@@ -7,19 +7,13 @@ on:
     paths:
       - '.github/workflows/**'
 jobs:
-  test-workflows:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: pwsh
-    steps:
-      - name: Placeholder
-        run: echo "Placeholder for testing workflows"
+  test-authorize-user:
+    uses: ./.github/workflows/test-authorize-user.yml
 
   validate-workflow-tests:
     # So we can add new tests without having to update branch protection rules
     name: Validate workflow test results
-    needs: [test-workflows]
+    needs: [test-authorize-user]
     if: always()
     runs-on: ubuntu-latest
     defaults:

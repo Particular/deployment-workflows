@@ -1,0 +1,10 @@
+name: Test - authorize-user
+on:
+  workflow_call:
+jobs:
+  test-authorized:
+    name: authorized actor
+    uses: ./.github/workflows/authorize-user.yml
+    with:
+      actor: test-authorized-user
+      authorized-users: test-authorized-user, another-user
