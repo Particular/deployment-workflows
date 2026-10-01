@@ -3,7 +3,7 @@ on:
   workflow_call:
 jobs:
   test-determine-image-tags:
-    name: determine-image-tags / ${{ matrix.scenario }}
+    name: ${{ matrix.scenario }}
     runs-on: ubuntu-latest
     defaults:
       run:
