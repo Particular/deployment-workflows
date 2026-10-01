@@ -7,19 +7,13 @@ on:
     paths:
       - '.github/actions/**'
 jobs:
-  test-actions:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: pwsh
-    steps:
-      - name: Placeholder
-        run: echo "Placeholder for testing actions"
+  test-create-draft-release-with-assets:
+    uses: ./.github/workflows/test-create-draft-release-with-assets.yml
 
   validate-action-tests:
     # So we can add new tests without having to update branch protection rules
     name: Validate action test results
-    needs: [test-actions]
+    needs: [test-create-draft-release-with-assets]
     if: always()
     runs-on: ubuntu-latest
     defaults:

@@ -1,0 +1,63 @@
+name: Test - create-draft-release-with-assets
+on:
+  workflow_call:
+jobs:
+  test-create-draft-release-with-assets:
+    name: dry run
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Prepare test assets
+        run: |
+          New-Item -ItemType Directory -Path test-assets/dir1/nested -Force | Out-Null
+          New-Item -ItemType Directory -Path test-assets/dir2 -Force | Out-Null
+          Set-Content -Path test-assets/dir1/file-a.txt -Value 'asset a'
+          Set-Content -Path test-assets/dir1/nested/file-b.txt -Value 'asset b'
+          Set-Content -Path test-assets/dir2/file-c.txt -Value 'asset c'
+      - name: Create draft release and attach assets
+        id: create
+        uses: ./.github/actions/create-draft-release-with-assets
+        with:
+          asset-paths: test-assets/dir1, test-assets/dir2
+          dry-run: true
+      - name: Verify resolved assets
+        run: |
+          $assets = '${{ steps.create.outputs.assets }}' -split ','
+          Write-Output "Resolved assets: $assets"
+
+          if ($assets.Count -ne 3)
+          {
+            throw "Expected 3 resolved assets (including the nested one), got $($assets.Count): $assets"
+          }
+
+          foreach ($expected in @('test-assets/dir1/file-a.txt', 'test-assets/dir1/nested/file-b.txt', 'test-assets/dir2/file-c.txt'))
+          {
+            $expectedFullPath = (Resolve-Path $expected).Path
+            if ($assets -notcontains $expectedFullPath)
+            {
+              throw "Expected assets to include '$expected', got: $assets"
+            }
+          }
+
+          Write-Output "OK"
+      - name: Verify no real release was created
+        run: |
+          gh release view '${{ github.ref_name }}' 2>$null
+          if ($LASTEXITCODE -eq 0)
+          {
+            throw "A real release for '${{ github.ref_name }}' exists even though dry-run was true."
+          }
+          Write-Output "OK: no real release exists for '${{ github.ref_name }}'"
+
+          # gh release view above is expected to fail (exit non-zero) when no release exists - reset
+          # $LASTEXITCODE so that the expected failure doesn't show the test run as failed.
+          $global:LASTEXITCODE = 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Clean up test assets
+        if: always()
+        run: Remove-Item -Path test-assets -Recurse -Force -ErrorAction SilentlyContinue
