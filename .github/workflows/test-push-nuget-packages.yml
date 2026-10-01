@@ -2,8 +2,8 @@ name: Test - push-nuget-packages
 on:
   workflow_call:
 jobs:
-  test-validation:
-    name: push-nuget-packages / ${{ matrix.scenario }}
+  test-push-nuget-packages:
+    name: ${{ matrix.scenario }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -18,42 +18,76 @@ jobs:
             nuget-user: ''
             api-key: ''
             feed-url: https://nuget.example.org
+            expect-failure: true
           - scenario: invalid release-state
             publish-mode: api-key
             release-state: not-a-state
             nuget-user: ''
             api-key: some-key
             feed-url: https://nuget.example.org
+            expect-failure: true
           - scenario: trusted-publishing missing nuget-user
             publish-mode: trusted-publishing
             release-state: published
             nuget-user: ''
             api-key: ''
             feed-url: https://nuget.example.org
+            expect-failure: true
           - scenario: trusted-publishing with conflicting api-key
             publish-mode: trusted-publishing
             release-state: published
             nuget-user: someuser
             api-key: some-key
             feed-url: https://nuget.example.org
+            expect-failure: true
           - scenario: api-key mode missing api-key
             publish-mode: api-key
             release-state: published
             nuget-user: ''
             api-key: ''
             feed-url: https://nuget.example.org
+            expect-failure: true
           - scenario: invalid feed-url
             publish-mode: api-key
             release-state: published
             nuget-user: ''
             api-key: some-key
             feed-url: not-a-url
+            expect-failure: true
+          - scenario: valid (published, trusted-publishing)
+            publish-mode: trusted-publishing
+            release-state: published
+            nuget-user: test-user
+            api-key: ''
+            feed-url: https://nuget.example.org
+            expect-failure: false
+          - scenario: valid (published, api-key)
+            publish-mode: api-key
+            release-state: published
+            nuget-user: ''
+            api-key: test-key
+            feed-url: https://nuget.example.org
+            expect-failure: false
+          - scenario: valid (draft, trusted-publishing)
+            publish-mode: trusted-publishing
+            release-state: draft
+            nuget-user: test-user
+            api-key: ''
+            feed-url: https://nuget.example.org
+            expect-failure: false
+          - scenario: valid (draft, api-key)
+            publish-mode: api-key
+            release-state: draft
+            nuget-user: ''
+            api-key: test-key
+            feed-url: https://nuget.example.org
+            expect-failure: false
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
-      - name: Push NuGet packages (expected to fail)
+      - name: Push NuGet packages
         id: push
-        continue-on-error: true
+        continue-on-error: ${{ matrix.expect-failure }}
         uses: ./.github/actions/push-nuget-packages
         with:
           version: 1.2.3
@@ -63,36 +97,24 @@ jobs:
           api-key: ${{ matrix.api-key }}
           feed-url: ${{ matrix.feed-url }}
           dry-run: true
-      - name: Verify it failed
+      - name: Verify
         run: |
+          $expectFailure = '${{ matrix.expect-failure }}' -eq 'true'
           $outcome = '${{ steps.push.outcome }}'
-          if ($outcome -ne 'failure')
-          {
-            throw "Expected push-nuget-packages to fail for scenario '${{ matrix.scenario }}', but outcome was '$outcome'."
-          }
-          Write-Output "OK: failed as expected ($outcome)"
 
-  test-valid-combinations:
-    name: push-nuget-packages / valid - ${{ matrix.release-state }} / ${{ matrix.publish-mode }}
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: pwsh
-    strategy:
-      fail-fast: false
-      matrix:
-        release-state: [published, draft]
-        publish-mode: [trusted-publishing, api-key]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7.0.1
-      - name: Push NuGet packages
-        uses: ./.github/actions/push-nuget-packages
-        with:
-          version: 1.2.3
-          release-state: ${{ matrix.release-state }}
-          publish-mode: ${{ matrix.publish-mode }}
-          nuget-user: ${{ matrix.publish-mode == 'trusted-publishing' && 'test-user' || '' }}
-          api-key: ${{ matrix.publish-mode == 'api-key' && 'test-key' || '' }}
-          feed-url: https://nuget.example.org
-          dry-run: true
+          if ($expectFailure)
+          {
+            if ($outcome -ne 'failure')
+            {
+              throw "Expected push-nuget-packages to fail for scenario '${{ matrix.scenario }}', but outcome was '$outcome'."
+            }
+            Write-Output "OK: failed as expected ($outcome)"
+          }
+          else
+          {
+            if ($outcome -ne 'success')
+            {
+              throw "Expected push-nuget-packages to succeed for scenario '${{ matrix.scenario }}', but outcome was '$outcome'."
+            }
+            Write-Output "OK: succeeded as expected ($outcome)"
+          }
