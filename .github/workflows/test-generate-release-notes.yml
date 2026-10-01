@@ -1,0 +1,10 @@
+name: Test - generate-release-notes
+on:
+  workflow_call:
+jobs:
+  test-generate-release-notes:
+    name: valid version
+    uses: ./.github/workflows/generate-release-notes.yml
+    with:
+      version: 1.2.3
+      dry-run: true
