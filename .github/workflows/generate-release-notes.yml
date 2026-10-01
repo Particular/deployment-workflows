@@ -5,6 +5,10 @@ on:
       version:
         required: true
         type: string
+      dry-run:
+        required: false
+        type: boolean
+        default: false
 jobs:
   generate-release-notes:
     runs-on: ubuntu-latest
@@ -29,6 +33,14 @@ jobs:
       - name: Update draft release notes from milestone
         run: |
           Write-Output "Updating draft release body for ${{ github.event.repository.name }} ${{ inputs.version }} from milestone '${{ inputs.version }}'"
-          dotnet-gitreleasemanager create --token $env:GITHUB_TOKEN -o "${{ github.repository_owner }}" -r "${{ github.event.repository.name }}" -m "${{ inputs.version }}" -n "${{ inputs.version }}" -d .release
+
+          if ('${{ inputs.dry-run }}' -eq 'true')
+          {
+            Write-Output "[dry-run] Would run: dotnet-gitreleasemanager create -o ${{ github.repository_owner }} -r ${{ github.event.repository.name }} -m ${{ inputs.version }} -n ${{ inputs.version }} -d .release"
+          }
+          else
+          {
+            dotnet-gitreleasemanager create --token $env:GITHUB_TOKEN -o "${{ github.repository_owner }}" -r "${{ github.event.repository.name }}" -m "${{ inputs.version }}" -n "${{ inputs.version }}" -d .release
+          }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
