@@ -9,11 +9,12 @@ on:
 jobs:
   test-push-docker-images:
     uses: ./.github/workflows/test-push-docker-images.yml
-
+  test-authorize-user:
+    uses: ./.github/workflows/test-authorize-user.yml
   validate-workflow-tests:
     # So we can add new tests without having to update branch protection rules
     name: Validate workflow test results
-    needs: [test-push-docker-images]
+    needs: [test-push-docker-images, test-authorize-user]]
     if: always()
     runs-on: ubuntu-latest
     defaults:
