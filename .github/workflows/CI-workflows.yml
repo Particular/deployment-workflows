@@ -8,13 +8,25 @@ on:
       - '.github/workflows/**'
 jobs:
   test-authorize-user:
-    uses: ./.github/workflows/test-authorize-user.yml
+    name: authorized actor
+    uses: ./.github/workflows/authorize-user.yml
+    with:
+      actor: test-authorized-user
+      authorized-users: test-authorized-user, another-user
 
   test-generate-release-notes:
-    uses: ./.github/workflows/test-generate-release-notes.yml
+    name: valid version
+    uses: ./.github/workflows/generate-release-notes.yml
+    with:
+      version: 1.2.3
+      dry-run: true
 
   test-publish-release-notes:
-    uses: ./.github/workflows/test-publish-release-notes.yml
+    name: valid version
+    uses: ./.github/workflows/publish-release-notes.yml
+    with:
+      version: 1.2.3
+      dry-run: true
 
   validate-workflow-tests:
     # So we can add new tests without having to update branch protection rules
