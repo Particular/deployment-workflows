@@ -3,7 +3,7 @@ on:
   workflow_call:
 jobs:
   test-create-draft-release-with-assets:
-    name: create-draft-release-with-assets / dry run
+    name: dry run
     runs-on: ubuntu-latest
     defaults:
       run:
