@@ -1,0 +1,10 @@
+name: Test - publish-release-notes
+on:
+  workflow_call:
+jobs:
+  test-publish-release-notes:
+    name: valid version
+    uses: ./.github/workflows/publish-release-notes.yml
+    with:
+      version: 1.2.3
+      dry-run: true

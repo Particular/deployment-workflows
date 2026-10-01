@@ -13,10 +13,13 @@ jobs:
   test-generate-release-notes:
     uses: ./.github/workflows/test-generate-release-notes.yml
 
+  test-publish-release-notes:
+    uses: ./.github/workflows/test-publish-release-notes.yml
+
   validate-workflow-tests:
     # So we can add new tests without having to update branch protection rules
     name: Validate workflow test results
-    needs: [test-authorize-user, test-generate-release-notes]
+    needs: [test-authorize-user, test-generate-release-notes, test-publish-release-notes]
     if: always()
     runs-on: ubuntu-latest
     defaults:
