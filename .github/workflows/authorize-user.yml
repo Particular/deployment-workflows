@@ -1,6 +1,21 @@
 name: Check Authorized User
 on:
   workflow_call:
+    inputs:
+      actor:
+        required: false
+        type: string
+        default: ''
+        description: >
+          Test-only override for the actor to check. Only usable within the Particular/deployment-workflows
+          repository - set anywhere else, this fails the workflow.
+      authorized-users:
+        required: false
+        type: string
+        default: ''
+        description: >
+          Test-only override for the comma-separated authorized users list. Only usable within the
+          Particular/deployment-workflows repository - set anywhere else, this fails the workflow.
 jobs:
   check-authorized-user:
     runs-on: ubuntu-latest
@@ -10,8 +25,19 @@ jobs:
     steps:
       - name: Verify authorized user
         run: |
-          $actor = "${{ github.actor }}"
-          $authorizedUsers = "${{ vars.AUTHORIZED_RELEASE_USERS }}" -split ',' | ForEach-Object { $_.Trim() }
+          $actorOverride = "${{ inputs.actor }}"
+          $authorizedUsersOverride = "${{ inputs.authorized-users }}"
+          $repository = "${{ github.repository }}"
+
+          if (($actorOverride -or $authorizedUsersOverride) -and $repository -ne 'Particular/deployment-workflows')
+          {
+            throw "The 'actor' and 'authorized-users' inputs are test-only overrides and may only be used within the Particular/deployment-workflows repository. This run is in '$repository'."
+          }
+
+          $actor = if ($actorOverride) { $actorOverride } else { "${{ github.actor }}" }
+          $authorizedUsersRaw = if ($authorizedUsersOverride) { $authorizedUsersOverride } else { "${{ vars.AUTHORIZED_RELEASE_USERS }}" }
+          $authorizedUsers = $authorizedUsersRaw -split ',' | ForEach-Object { $_.Trim() }
+
           if ($authorizedUsers -notcontains $actor) {
             Write-Error "User '$actor' is not authorized to run this workflow."
             exit 1
