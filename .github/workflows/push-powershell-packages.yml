@@ -8,6 +8,10 @@ on:
       package-pattern:
         required: true
         type: string
+      dry-run:
+        required: false
+        type: boolean
+        default: false
 jobs:
   push-powershell-packages:
     runs-on: ubuntu-latest
@@ -17,7 +21,14 @@ jobs:
     steps:
       - name: Download assets from release
         run: |
-          gh release download "${{ inputs.version }}" --repo "${{ github.repository }}" --pattern "${{ inputs.package-pattern }}" --dir powershellModules
+          if ('${{ inputs.dry-run }}' -eq 'true')
+          {
+            Write-Output "[dry-run] Would download assets matching '${{ inputs.package-pattern }}' from release '${{ inputs.version }}'."
+          }
+          else
+          {
+            gh release download "${{ inputs.version }}" --repo "${{ github.repository }}" --pattern "${{ inputs.package-pattern }}" --dir powershellModules
+          }
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -29,10 +40,17 @@ jobs:
           {
               Register-PSResourceRepository -Name ${{ vars.GALLERY_NAME }} -Uri ${{ vars.GALLERY_SOURCE_LOCATION }} -Trusted
           }
-          $psModules = Get-ChildItem powershellModules -File
-          Write-Output "Pushing $($psModules.Count) PowerShell module package(s) to ${{ vars.GALLERY_NAME }}:"
-          $psModules | ForEach-Object { Write-Output " - $($_.Name)" }
-          foreach ($module in $psModules)
+          if ('${{ inputs.dry-run }}' -eq 'true')
           {
-            Publish-PSResource -NupkgPath $module.FullName -Repository ${{ vars.GALLERY_NAME }} -ApiKey ${{ secrets.GALLERY_KEY }}
+            Write-Output "[dry-run] Would push PowerShell module package(s) found under 'powershellModules/' to ${{ vars.GALLERY_NAME }}."
+          }
+          else
+          {
+            $psModules = Get-ChildItem powershellModules -File
+            Write-Output "Pushing $($psModules.Count) PowerShell module package(s) to ${{ vars.GALLERY_NAME }}:"
+            $psModules | ForEach-Object { Write-Output " - $($_.Name)" }
+            foreach ($module in $psModules)
+            {
+              Publish-PSResource -NupkgPath $module.FullName -Repository ${{ vars.GALLERY_NAME }} -ApiKey ${{ secrets.GALLERY_KEY }}
+            }
           }
