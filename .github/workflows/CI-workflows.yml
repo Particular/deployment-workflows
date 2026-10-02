@@ -28,10 +28,27 @@ jobs:
       version: 1.2.3
       dry-run: true
 
+  test-push-powershell-packages:
+    name: valid version
+    uses: ./.github/workflows/push-powershell-packages.yml
+    with:
+      version: 1.2.3
+      package-pattern: '*.nupkg'
+      dry-run: true
+
+  test-push-release-info-to-aws-s3:
+    name: valid version
+    uses: ./.github/workflows/push-release-info-to-aws-s3.yml
+    with:
+      version: 1.2.3
+      product: TestProduct
+      bucket: test-bucket
+      dry-run: true
+
   validate-workflow-tests:
     # So we can add new tests without having to update branch protection rules
     name: Validate workflow test results
-    needs: [test-authorize-user, test-generate-release-notes, test-publish-release-notes]
+    needs: [test-authorize-user, test-generate-release-notes, test-publish-release-notes, test-push-powershell-packages, test-push-release-info-to-aws-s3]
     if: always()
     runs-on: ubuntu-latest
     defaults:
