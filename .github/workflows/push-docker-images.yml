@@ -46,9 +46,11 @@ jobs:
             throw "image-config-file '$path' was not found in the repository."
           }
 
-          $imageConfigs = Get-Content -Raw -Path $path | ConvertFrom-Json -ErrorAction Stop
+          # Wrapping in $() forces an array. Apparently ConvertFrom-Json returns a single element
+          # array as just the single element, which breaks things
+          $imageConfigs = @(Get-Content -Raw -Path $path | ConvertFrom-Json -ErrorAction Stop)
 
-          if ($imageConfigs -isnot [array] -or $imageConfigs.Count -eq 0)
+          if ($imageConfigs.Count -eq 0)
           {
             throw "image-config-file '$path' must contain a non-empty JSON array."
           }
