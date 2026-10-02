@@ -7,19 +7,13 @@ on:
     paths:
       - '.github/actions/**'
 jobs:
-  test-actions:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: pwsh
-    steps:
-      - name: Placeholder
-        run: echo "Placeholder for testing actions"
+  test-determine-image-tags:
+    uses: ./.github/workflows/test-determine-image-tags.yml
 
   validate-action-tests:
     # So we can add new tests without having to update branch protection rules
     name: Validate action test results
-    needs: [test-actions]
+    needs: [test-determine-image-tags]
     if: always()
     runs-on: ubuntu-latest
     defaults:

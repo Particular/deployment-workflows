@@ -14,6 +14,13 @@ on:
         required: false
         type: string
         default: .github/docker-images.json
+      dry-run:
+        description: >
+          If true, skips registry logins and all actual pushes/description updates with loging of what would have happened
+          instead.
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: read
   packages: write
@@ -80,17 +87,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7.0.1
       - name: Log in to GitHub container registry
+        if: ${{ !inputs.dry-run }}
         uses: docker/login-action@v4.2.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Login to Docker Hub
+        if: ${{ !inputs.dry-run }}
         uses: docker/login-action@v4.2.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Set up Docker Buildx
+        if: ${{ !inputs.dry-run }}
         uses: docker/setup-buildx-action@v4.1.0
       - name: Publish to Docker Hub
         run: |
@@ -108,12 +118,19 @@ jobs:
             $tagsCLI = $tags -replace "^", "--tag particular/${name}:"
             $cmd = "docker buildx imagetools create $tagsCLI ghcr.io/particular/${name}:$sourceTag"
             Write-Output "Command: $cmd"
-            Invoke-Expression $cmd
+            if ('${{ inputs.dry-run }}' -eq 'true')
+            {
+              Write-Output "[dry-run] Skipping execution."
+            }
+            else
+            {
+              Invoke-Expression $cmd
+            }
             Write-Output "::endgroup::"
           }
   update-descriptions:
     needs: [determine-image-configurations, push-to-container-registry]
-    if: ${{ needs.determine-image-configurations.outputs.latest == 'true' }}
+    if: ${{ needs.determine-image-configurations.outputs.latest == 'true' && !inputs.dry-run }}
     runs-on: ubuntu-latest
     name: Update Docker Hub description
     strategy:
