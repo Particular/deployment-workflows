@@ -29,6 +29,10 @@ inputs:
     required: false
     default: ''
     description: API key used to authenticate the push (required when publish-mode is api-key)
+  dry-run:
+    required: false
+    default: 'false'
+    description: If true, skips real release downloads, NuGet trusted-publishing login, the actual push to NuGet and logs what would happen instead.
 runs:
   using: composite
   steps:
@@ -68,9 +72,17 @@ runs:
       shell: pwsh
       run: |
         $version = "${{ inputs.version }}"
-        gh release download $version --repo "${{ github.repository }}" --pattern "*.nupkg" --dir nugets
-        if ($LASTEXITCODE -ne 0) {
-          throw "Failed to download release assets for tag '$version'"
+
+        if ('${{ inputs.dry-run }}' -eq 'true')
+        {
+          Write-Output "[dry-run] Would download assets from published release '$version'."
+        }
+        else
+        {
+          gh release download $version --repo "${{ github.repository }}" --pattern "*.nupkg" --dir nugets
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to download release assets for tag '$version'"
+          }
         }
       env:
         GH_TOKEN: ${{ github.token }}
@@ -79,15 +91,23 @@ runs:
       shell: pwsh
       run: |
         $name = "${{ inputs.version }}"
-        $releases = gh api "repos/${{ github.repository }}/releases" | ConvertFrom-Json
-        $release = $releases | Where-Object { $_.name -eq $name } | Select-Object -First 1
-        if (-not $release) {
-          throw "Could not find a draft release named '$name'"
+
+        if ('${{ inputs.dry-run }}' -eq 'true')
+        {
+          Write-Output "[dry-run] Would look up and download assets from draft release named '$name'."
         }
-        Write-Output "Found draft release id $($release.id) with tag '$($release.tag_name)' for '$name'"
-        gh release download $release.tag_name --repo "${{ github.repository }}" --pattern "*.nupkg" --dir nugets
-        if ($LASTEXITCODE -ne 0) {
-          throw "Failed to download release assets for tag '$($release.tag_name)'"
+        else
+        {
+          $releases = gh api "repos/${{ github.repository }}/releases" | ConvertFrom-Json
+          $release = $releases | Where-Object { $_.name -eq $name } | Select-Object -First 1
+          if (-not $release) {
+            throw "Could not find a draft release named '$name'"
+          }
+          Write-Output "Found draft release id $($release.id) with tag '$($release.tag_name)' for '$name'"
+          gh release download $release.tag_name --repo "${{ github.repository }}" --pattern "*.nupkg" --dir nugets
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to download release assets for tag '$($release.tag_name)'"
+          }
         }
       env:
         GH_TOKEN: ${{ github.token }}
@@ -99,7 +119,7 @@ runs:
         $domain = ([Uri]"${{ inputs.feed-url }}").GetLeftPart([System.UriPartial]::Authority)
         Write-Output "domain=$domain" >> $env:GITHUB_OUTPUT
     - name: Get NuGet trusted publishing API key
-      if: inputs.publish-mode == 'trusted-publishing'
+      if: inputs.publish-mode == 'trusted-publishing' && inputs.dry-run != 'true'
       uses: NuGet/login@v1
       id: login
       with:
@@ -109,20 +129,28 @@ runs:
     - name: Push NuGet packages
       shell: pwsh
       run: |
-        $getChildItemParams = @{ Path = 'nugets/*'; Include = '*.nupkg' }
-        $excludePattern = "${{ inputs.exclude-package-pattern }}"
-        if ($excludePattern) { $getChildItemParams.Exclude = $excludePattern }
-        $packages = Get-ChildItem @getChildItemParams
         $source = "${{ inputs.feed-url }}"
-        $apiKey = if ("${{ inputs.publish-mode }}" -eq 'trusted-publishing') { "${{ steps.login.outputs.NUGET_API_KEY }}" } else { "${{ inputs.api-key }}" }
-        Write-Output "Pushing $($packages.Count) NuGet package(s) to $source`:"
-        $packages | ForEach-Object { Write-Output " - $($_.Name)" }
-        $failed = @()
-        foreach ($package in $packages)
+
+        if ('${{ inputs.dry-run }}' -eq 'true')
         {
-          dotnet nuget push $package.FullName --source $source --api-key $apiKey --skip-duplicate
-          if ($LASTEXITCODE -ne 0) { $failed += $package.Name }
+          Write-Output "[dry-run] Would push NuGet package(s) found under 'nugets/' to $source."
         }
-        if ($failed.Count -gt 0) {
-          throw "Failed to push $($failed.Count) package(s): $($failed -join ', ')"
+        else
+        {
+          $getChildItemParams = @{ Path = 'nugets/*'; Include = '*.nupkg' }
+          $excludePattern = "${{ inputs.exclude-package-pattern }}"
+          if ($excludePattern) { $getChildItemParams.Exclude = $excludePattern }
+          $packages = Get-ChildItem @getChildItemParams
+          $apiKey = if ("${{ inputs.publish-mode }}" -eq 'trusted-publishing') { "${{ steps.login.outputs.NUGET_API_KEY }}" } else { "${{ inputs.api-key }}" }
+          Write-Output "Pushing $($packages.Count) NuGet package(s) to $source`:"
+          $packages | ForEach-Object { Write-Output " - $($_.Name)" }
+          $failed = @()
+          foreach ($package in $packages)
+          {
+            dotnet nuget push $package.FullName --source $source --api-key $apiKey --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { $failed += $package.Name }
+          }
+          if ($failed.Count -gt 0) {
+            throw "Failed to push $($failed.Count) package(s): $($failed -join ', ')"
+          }
         }
