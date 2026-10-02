@@ -4,9 +4,7 @@ inputs:
   version:
     required: true
     description: >
-      Release to download package assets from. For release-state 'published' this is
-      the release tag. For release-state 'draft' this is the release name (draft
-      releases aren't addressable by tag).
+      Release to download package assets from.
   release-state:
     required: true
     description: Whether version identifies a 'published' release (by tag) or a 'draft' release (by name). One of 'published' or 'draft'
