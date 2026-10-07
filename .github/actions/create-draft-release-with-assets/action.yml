@@ -2,8 +2,9 @@ name: Create draft release with assets
 description: Creates a draft GitHub release and attaches asset files found under the given paths
 inputs:
   asset-paths:
-    required: true
-    description: Comma-separated paths/globs passed to Get-ChildItem, e.g. "nugets/, powershellModules/, assets/"
+    default: 'nugets,assets'
+    required: false
+    description: Comma-separated paths where asset files are located
 runs:
   using: composite
   steps:
@@ -11,7 +12,7 @@ runs:
       shell: pwsh
       run: |
         $paths = '${{ inputs.asset-paths }}' -split ',' | ForEach-Object { $_.Trim() }
-        $assets = (Get-ChildItem -Path $paths -File -Recurse).FullName
+        $assets = (Get-ChildItem -LiteralPath ($paths.Where({Test-Path $_})) -File -Recurse).FullName
         Write-Output "Assets to attach: $assets"
         Write-Output "Creating draft release for ${{ github.event.repository.name }} ${{ github.ref_name }} at commit ${{ github.sha }}"
         gh release create ${{ github.ref_name }} $assets -d -n "<!-- RELEASE PENDING -->" -t "${{ github.ref_name }}"
