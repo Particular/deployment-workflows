@@ -9,11 +9,13 @@ on:
 jobs:
   test-create-draft-release-with-assets:
     uses: ./.github/workflows/test-create-draft-release-with-assets.yml
+  test-push-nuget-packages:
+    uses: ./.github/workflows/test-push-nuget-packages.yml
 
   validate-action-tests:
     # So we can add new tests without having to update branch protection rules
     name: Validate action test results
-    needs: [test-create-draft-release-with-assets]
+    needs: [test-create-draft-release-with-assets, test-push-nuget-packages]
     if: always()
     runs-on: ubuntu-latest
     defaults:
