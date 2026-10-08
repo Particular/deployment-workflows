@@ -12,75 +12,35 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - scenario: invalid publish-mode
-            publish-mode: not-a-mode
-            release-state: published
-            nuget-user: ''
-            api-key: ''
-            feed-url: https://nuget.example.org
-            expect-failure: true
-          - scenario: invalid release-state
-            publish-mode: api-key
-            release-state: not-a-state
-            nuget-user: ''
+          - scenario: missing version
+            version: ''
+            deploy-environment: staging
             api-key: some-key
-            feed-url: https://nuget.example.org
             expect-failure: true
-          - scenario: trusted-publishing missing nuget-user
-            publish-mode: trusted-publishing
-            release-state: published
-            nuget-user: ''
-            api-key: ''
-            feed-url: https://nuget.example.org
-            expect-failure: true
-          - scenario: trusted-publishing with conflicting api-key
-            publish-mode: trusted-publishing
-            release-state: published
-            nuget-user: someuser
+          - scenario: missing deploy-environment
+            version: 1.2.3
+            deploy-environment: ''
             api-key: some-key
-            feed-url: https://nuget.example.org
             expect-failure: true
-          - scenario: api-key mode missing api-key
-            publish-mode: api-key
-            release-state: published
-            nuget-user: ''
-            api-key: ''
-            feed-url: https://nuget.example.org
-            expect-failure: true
-          - scenario: invalid feed-url
-            publish-mode: api-key
-            release-state: published
-            nuget-user: ''
+          - scenario: invalid deploy-environment
+            version: 1.2.3
+            deploy-environment: not-a-valid-value
             api-key: some-key
-            feed-url: not-a-url
             expect-failure: true
-          - scenario: valid (published, trusted-publishing)
-            publish-mode: trusted-publishing
-            release-state: published
-            nuget-user: test-user
+          - scenario: missing api-key
+            version: 1.2.3
+            deploy-environment: staging
             api-key: ''
-            feed-url: https://nuget.example.org
+            expect-failure: true
+          - scenario: valid (staging)
+            version: 1.2.3
+            deploy-environment: staging
+            api-key: some-key
             expect-failure: false
-          - scenario: valid (published, api-key)
-            publish-mode: api-key
-            release-state: published
-            nuget-user: ''
-            api-key: test-key
-            feed-url: https://nuget.example.org
-            expect-failure: false
-          - scenario: valid (draft, trusted-publishing)
-            publish-mode: trusted-publishing
-            release-state: draft
-            nuget-user: test-user
-            api-key: ''
-            feed-url: https://nuget.example.org
-            expect-failure: false
-          - scenario: valid (draft, api-key)
-            publish-mode: api-key
-            release-state: draft
-            nuget-user: ''
-            api-key: test-key
-            feed-url: https://nuget.example.org
+          - scenario: valid (production)
+            version: 1.2.3
+            deploy-environment: production
+            api-key: some-key
             expect-failure: false
     steps:
       - name: Checkout
@@ -90,12 +50,9 @@ jobs:
         continue-on-error: ${{ matrix.expect-failure }}
         uses: ./.github/actions/push-nuget-packages
         with:
-          version: 1.2.3
-          release-state: ${{ matrix.release-state }}
-          publish-mode: ${{ matrix.publish-mode }}
-          nuget-user: ${{ matrix.nuget-user }}
+          version: ${{ matrix.version }}
+          deploy-environment: ${{ matrix.deploy-environment }}
           api-key: ${{ matrix.api-key }}
-          feed-url: ${{ matrix.feed-url }}
           dry-run: true
       - name: Verify
         run: |
