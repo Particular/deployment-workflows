@@ -13,8 +13,8 @@ jobs:
       version: 1.2.3
       image-config-file: test/push-docker-images/valid-multi-image.json
       dry-run: true
-  test-authorize-user:
-    uses: ./.github/workflows/authorize-user.yml
+  test-verify-authorized-user:
+    uses: ./.github/workflows/verify-authorized-user.yml
     with:
       actor: test-authorized-user
       authorized-users: test-authorized-user, another-user
@@ -44,7 +44,7 @@ jobs:
   validate-workflow-tests:
     # So we can add new tests without having to update branch protection rules
     name: Validate workflow test results
-    needs: [test-push-docker-images, test-authorize-user, test-generate-release-notes, test-publish-release-notes, test-push-powershell-packages, test-push-release-info-to-aws-s3]
+    needs: [test-push-docker-images, test-verify-authorized-user, test-generate-release-notes, test-publish-release-notes, test-push-powershell-packages, test-push-release-info-to-aws-s3]
     if: always()
     runs-on: ubuntu-latest
     defaults:

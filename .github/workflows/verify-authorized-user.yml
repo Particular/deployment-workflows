@@ -1,4 +1,4 @@
-name: Check Authorized User
+name: Verify Authorized User
 on:
   workflow_call:
     inputs:
@@ -6,18 +6,14 @@ on:
         required: false
         type: string
         default: ''
-        description: >
-          Test-only override for the actor to check. Only usable within the Particular/deployment-workflows
-          repository - set anywhere else, this fails the workflow.
+        description: Test-only override for the actor to check. Only usable within the Particular/deployment-workflows repository - set anywhere else, this fails the workflow.
       authorized-users:
         required: false
         type: string
         default: ''
-        description: >
-          Test-only override for the comma-separated authorized users list. Only usable within the
-          Particular/deployment-workflows repository - set anywhere else, this fails the workflow.
+        description: Test-only override for the comma-separated authorized users list. Only usable within the Particular/deployment-workflows repository - set anywhere else, this fails the workflow.
 jobs:
-  check-authorized-user:
+  verify-authorized-user:
     runs-on: ubuntu-latest
     defaults:
       run:
