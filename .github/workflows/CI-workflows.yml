@@ -1,11 +1,11 @@
 name: CI - Workflows
 on:
-  pull_request:
-    branches: [main]
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/**'
+  pull_request:
+defaults:
+  run:
+    shell: pwsh
 jobs:
   test-push-docker-images:
     uses: ./.github/workflows/push-docker-images.yml
@@ -47,9 +47,6 @@ jobs:
     needs: [test-push-docker-images, test-verify-authorized-user, test-generate-release-notes, test-publish-release-notes, test-push-powershell-packages, test-push-release-info-to-aws-s3]
     if: always()
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: pwsh
     steps:
       - name: Check all jobs succeeded
         run: |
