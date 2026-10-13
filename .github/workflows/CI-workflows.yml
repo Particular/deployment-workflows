@@ -8,7 +8,11 @@ on:
       - '.github/workflows/**'
 jobs:
   test-push-docker-images:
-    uses: ./.github/workflows/test-push-docker-images.yml
+    uses: ./.github/workflows/push-docker-images.yml
+    with:
+      version: 1.2.3
+      image-config-file: test/push-docker-images/valid-multi-image.json
+      dry-run: true
   test-authorize-user:
     uses: ./.github/workflows/authorize-user.yml
     with:
