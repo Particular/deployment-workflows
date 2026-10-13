@@ -13,6 +13,7 @@ jobs:
       version: 1.2.3
       image-config-file: test/push-docker-images/valid-multi-image.json
       dry-run: true
+    secrets: inherit
   test-verify-authorized-user:
     uses: ./.github/workflows/verify-authorized-user.yml
     with:
@@ -41,6 +42,7 @@ jobs:
       product: TestProduct
       bucket: test-bucket
       dry-run: true
+    secrets: inherit
   validate-workflow-tests:
     # So we can add new tests without having to update branch protection rules
     name: Validate workflow test results
