@@ -17,11 +17,10 @@ jobs:
         shell: pwsh
     steps:
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@v6.0.0
         with:
-          dotnet-version: 'latest'
+          dotnet-version: latest
       - name: Setup GitReleaseManager
-        # https://github.com/GitTools/GitReleaseManager#net-global-tool
         run: dotnet tool install --global GitReleaseManager.Tool
       - name: Publish release
         run: |
