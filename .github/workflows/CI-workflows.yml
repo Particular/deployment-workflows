@@ -10,32 +10,27 @@ jobs:
   test-push-docker-images:
     uses: ./.github/workflows/test-push-docker-images.yml
   test-authorize-user:
-    name: authorized actor
     uses: ./.github/workflows/authorize-user.yml
     with:
       actor: test-authorized-user
       authorized-users: test-authorized-user, another-user
   test-generate-release-notes:
-    name: valid version
     uses: ./.github/workflows/generate-release-notes.yml
     with:
       version: 1.2.3
       dry-run: true
   test-publish-release-notes:
-    name: valid version
     uses: ./.github/workflows/publish-release-notes.yml
     with:
       version: 1.2.3
       dry-run: true
   test-push-powershell-packages:
-    name: valid version
     uses: ./.github/workflows/push-powershell-packages.yml
     with:
       version: 1.2.3
       package-pattern: '*.nupkg'
       dry-run: true
   test-push-release-info-to-aws-s3:
-    name: valid version
     uses: ./.github/workflows/push-release-info-to-aws-s3.yml
     with:
       version: 1.2.3
