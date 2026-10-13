@@ -1,0 +1,19 @@
+name: Test - push-docker-images
+on:
+  workflow_call:
+jobs:
+  test-valid:
+    name: valid config (${{ matrix.scenario }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scenario: single image
+            image-config-file: test/push-docker-images/valid-single-image.json
+          - scenario: multiple images
+            image-config-file: test/push-docker-images/valid-multi-image.json
+    uses: ./.github/workflows/push-docker-images.yml
+    with:
+      version: 1.2.3
+      image-config-file: ${{ matrix.image-config-file }}
+      dry-run: true
