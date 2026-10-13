@@ -5,6 +5,10 @@ on:
       version:
         required: true
         type: string
+      dry-run:
+        required: false
+        type: boolean
+        default: false
 jobs:
   publish-release-notes:
     runs-on: ubuntu-latest
@@ -13,15 +17,22 @@ jobs:
         shell: pwsh
     steps:
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@v6.0.0
         with:
-          dotnet-version: 'latest'
+          dotnet-version: latest
       - name: Setup GitReleaseManager
-        # https://github.com/GitTools/GitReleaseManager#net-global-tool
         run: dotnet tool install --global GitReleaseManager.Tool
       - name: Publish release
         run: |
           Write-Output "Publishing release ${{ inputs.version }} for ${{ github.event.repository.name }}"
-          dotnet-gitreleasemanager publish --token $env:GITHUB_TOKEN -o "${{ github.repository_owner }}" -r "${{ github.event.repository.name }}" -t "${{ inputs.version }}"
+
+          if ('${{ inputs.dry-run }}' -eq 'true')
+          {
+            Write-Output "[dry-run] Would run: dotnet-gitreleasemanager publish -o ${{ github.repository_owner }} -r ${{ github.event.repository.name }} -t ${{ inputs.version }}"
+          }
+          else
+          {
+            dotnet-gitreleasemanager publish --token $env:GITHUB_TOKEN -o "${{ github.repository_owner }}" -r "${{ github.event.repository.name }}" -t "${{ inputs.version }}"
+          }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

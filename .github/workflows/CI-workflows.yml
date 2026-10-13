@@ -1,24 +1,52 @@
 name: CI - Workflows
 on:
-  pull_request:
-    branches: [main]
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/**'
+  pull_request:
+defaults:
+  run:
+    shell: pwsh
 jobs:
   test-push-docker-images:
-    uses: ./.github/workflows/test-push-docker-images.yml
-
+    uses: ./.github/workflows/push-docker-images.yml
+    with:
+      version: 1.2.3
+      image-config-file: test/push-docker-images/valid-multi-image.json
+      dry-run: true
+  test-verify-authorized-user:
+    uses: ./.github/workflows/verify-authorized-user.yml
+    with:
+      actor: test-authorized-user
+      authorized-users: test-authorized-user, another-user
+  test-generate-release-notes:
+    uses: ./.github/workflows/generate-release-notes.yml
+    with:
+      version: 1.2.3
+      dry-run: true
+  test-publish-release-notes:
+    uses: ./.github/workflows/publish-release-notes.yml
+    with:
+      version: 1.2.3
+      dry-run: true
+  test-push-powershell-packages:
+    uses: ./.github/workflows/push-powershell-packages.yml
+    with:
+      version: 1.2.3
+      package-pattern: '*.nupkg'
+      dry-run: true
+  test-push-release-info-to-aws-s3:
+    uses: ./.github/workflows/push-release-info-to-aws-s3.yml
+    with:
+      version: 1.2.3
+      product: TestProduct
+      bucket: test-bucket
+      dry-run: true
   validate-workflow-tests:
     # So we can add new tests without having to update branch protection rules
     name: Validate workflow test results
-    needs: [test-push-docker-images]
+    needs: [test-push-docker-images, test-verify-authorized-user, test-generate-release-notes, test-publish-release-notes, test-push-powershell-packages, test-push-release-info-to-aws-s3]
     if: always()
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: pwsh
     steps:
       - name: Check all jobs succeeded
         run: |
