@@ -30,9 +30,14 @@ jobs:
       version: 1.2.3
       dry-run: true
   test-push-powershell-packages:
+    name: test-push-powershell-packages (${{ matrix.deploy-environment }})
+    strategy:
+      matrix:
+        deploy-environment: [staging, production]
     uses: ./.github/workflows/push-powershell-packages.yml
     with:
       version: 1.2.3
+      deploy-environment: ${{ matrix.deploy-environment }}
       package-pattern: '*.nupkg'
       dry-run: true
   test-push-release-info-to-aws-s3:
