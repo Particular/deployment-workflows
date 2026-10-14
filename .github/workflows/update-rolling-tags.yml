@@ -1,0 +1,45 @@
+name: Update Rolling Tags
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+permissions:
+  contents: write
+defaults:
+  run:
+    shell: pwsh
+jobs:
+  update-rolling-tags:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-tags: true
+      - name: Update rolling tags
+        run: |
+          $pushed = [version]'${{ github.ref_name }}'
+          $major = $pushed.Major
+          $minor = $pushed.Minor
+
+          $stableTags = git tag --list | Where-Object { $_ -match '^\d+\.\d+\.\d+$' }
+
+          $rollingTags = @(
+            @{ Name = "v$major"; Pattern = "^$major\.\d+\.\d+$" },
+            @{ Name = "v$major.$minor"; Pattern = "^$major\.$minor\.\d+$" }
+          )
+
+          foreach ($rolling in $rollingTags)
+          {
+            $highest = $stableTags | Where-Object { $_ -match $rolling.Pattern } | ForEach-Object { [version]$_ } | Sort-Object -Descending | Select-Object -First 1
+
+            if ($pushed -lt $highest)
+            {
+              Write-Output "Skipping $($rolling.Name): $highest is newer than ${{ github.ref_name }}."
+              continue
+            }
+
+            Write-Output "Moving $($rolling.Name) to ${{ github.ref_name }} (${{ github.sha }})."
+            git tag --force $rolling.Name ${{ github.sha }}
+            git push origin $rolling.Name --force
+          }
