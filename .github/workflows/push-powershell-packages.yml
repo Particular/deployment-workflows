@@ -11,6 +11,7 @@ on:
         required: true
         type: string
       package-pattern:
+        description: The glob pattern to select the desired files
         required: true
         type: string
       dry-run:
