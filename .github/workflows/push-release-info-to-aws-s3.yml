@@ -27,7 +27,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESSKEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRETKEY }}
-          aws-region: us-west-2
+          aws-region: us-east-1
       - name: Push release info to S3
         run: |
           if ('${{ inputs.dry-run }}' -eq 'true')
