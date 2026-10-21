@@ -10,12 +10,12 @@ Shared workflows and actions for Particular's release deployment process.
 
 ```yaml
 # Action - a step inside your job
-- uses: Particular/deployment-workflows/.github/actions/<name>@<version>
+- uses: Particular/deployment-workflows/.github/actions/<name>@<version-of-the-action>
 
 # Workflow - a job in your workflow
 jobs:
   my-job:
-    uses: Particular/deployment-workflows/.github/workflows/<name>.yml@<version>
+    uses: Particular/deployment-workflows/.github/workflows/<name>.yml@<version-of-the-workflow>
     secrets: inherit # workflows declare no secrets, so inherit is required when they need any
 ```
 
@@ -33,14 +33,14 @@ Creates a draft GitHub release for the current `github.ref_name` and attaches ev
 
 ```yaml
 # Basic
-- uses: Particular/deployment-workflows/.github/actions/create-draft-release-with-assets@<version>
+- uses: Particular/deployment-workflows/.github/actions/create-draft-release-with-assets@<version-of-the-action>
   with:
     asset-paths: nugets/
 ```
 
 ```yaml
 # Full
-- uses: Particular/deployment-workflows/.github/actions/create-draft-release-with-assets@<version>
+- uses: Particular/deployment-workflows/.github/actions/create-draft-release-with-assets@<version-of-the-action>
   id: draft
   with:
     asset-paths: nugets/, powershellModules/, assets/*.zip # comma-separated paths/globs, searched recursively; default nugets,assets
@@ -64,7 +64,7 @@ Downloads the `.nupkg` assets from a release and pushes them to the NuGet feed f
 
 ```yaml
 # Basic
-- uses: Particular/deployment-workflows/.github/actions/push-nuget-packages@<version>
+- uses: Particular/deployment-workflows/.github/actions/push-nuget-packages@<version-of-the-action>
   with:
     version: ${{ github.ref_name }}
     deploy-environment: production
@@ -73,9 +73,9 @@ Downloads the `.nupkg` assets from a release and pushes them to the NuGet feed f
 
 ```yaml
 # Full
-- uses: Particular/deployment-workflows/.github/actions/push-nuget-packages@<version>
+- uses: Particular/deployment-workflows/.github/actions/push-nuget-packages@<version-of-the-action>
   with:
-    version: 1.2.3                       # release tag (production) or release *name* (staging)
+    version: 1.2.3                       # release tag or name
     deploy-environment: staging          # staging | production
     api-key: ${{ secrets.FEEDZ_API_KEY }} # required; used for the staging push
     exclude-package-pattern: '*.Tests.*' # default: none. Glob of package filenames to skip
@@ -89,7 +89,7 @@ Works out which Docker tags a version should get (`1.2.3`, `1.2`, `1`, `latest`)
 **Assumes:** `version` is `X.Y.Z` or `X.Y.Z-prerelease`. Prereleases only get their exact tag. Floating tags only move forward (a backport won't take `latest` or the major tag).
 
 ```yaml
-- uses: Particular/deployment-workflows/.github/actions/determine-image-tags@<version>
+- uses: Particular/deployment-workflows/.github/actions/determine-image-tags@<version-of-the-action>
   id: tags
   with:
     version: 1.2.3
@@ -111,7 +111,7 @@ Fails unless the triggering user (`github.actor`) is listed in the `AUTHORIZED_R
 ```yaml
 jobs:
   authorize:
-    uses: Particular/deployment-workflows/.github/workflows/verify-authorized-user.yml@<version>
+    uses: Particular/deployment-workflows/.github/workflows/verify-authorized-user.yml@<version-of-the-workflow>
   release:
     needs: authorize
     # ...
@@ -131,7 +131,7 @@ Fills the draft release's notes from the closed issues of the milestone named af
 ```yaml
 # Basic
 generate-notes:
-  uses: Particular/deployment-workflows/.github/workflows/generate-release-notes.yml@<version>
+  uses: Particular/deployment-workflows/.github/workflows/generate-release-notes.yml@<version-of-the-workflow>
   with:
     version: 1.2.3
 ```
@@ -139,7 +139,7 @@ generate-notes:
 ```yaml
 # Full
 generate-notes:
-  uses: Particular/deployment-workflows/.github/workflows/generate-release-notes.yml@<version>
+  uses: Particular/deployment-workflows/.github/workflows/generate-release-notes.yml@<version-of-the-workflow>
   with:
     version: 1.2.3 # milestone and release name
     dry-run: false # default false
@@ -154,7 +154,7 @@ Publishes the draft release for `version` (via GitReleaseManager).
 ```yaml
 # Basic
 publish:
-  uses: Particular/deployment-workflows/.github/workflows/publish-release-notes.yml@<version>
+  uses: Particular/deployment-workflows/.github/workflows/publish-release-notes.yml@<version-of-the-workflow>
   with:
     version: 1.2.3
 ```
@@ -162,7 +162,7 @@ publish:
 ```yaml
 # Full
 publish:
-  uses: Particular/deployment-workflows/.github/workflows/publish-release-notes.yml@<version>
+  uses: Particular/deployment-workflows/.github/workflows/publish-release-notes.yml@<version-of-the-workflow>
   with:
     version: 1.2.3 # release tag
     dry-run: false # default false
@@ -185,7 +185,7 @@ Downloads matching release assets and publishes them to the PowerShell gallery f
 ```yaml
 # Basic
 push-ps:
-  uses: Particular/deployment-workflows/.github/workflows/push-powershell-packages.yml@<version>
+  uses: Particular/deployment-workflows/.github/workflows/push-powershell-packages.yml@<version-of-the-workflow>
   with:
     version: 1.2.3
     deploy-environment: production
@@ -196,7 +196,7 @@ push-ps:
 ```yaml
 # Full
 push-ps:
-  uses: Particular/deployment-workflows/.github/workflows/push-powershell-packages.yml@<version>
+  uses: Particular/deployment-workflows/.github/workflows/push-powershell-packages.yml@<version-of-the-workflow>
   with:
     version: 1.2.3                # release tag (production) or release *name* (staging)
     deploy-environment: staging   # staging | production
@@ -214,7 +214,7 @@ Uploads a release's info (tag, URL, publish date, `.exe` assets) as JSON to `s3:
 ```yaml
 # Basic
 push-s3:
-  uses: Particular/deployment-workflows/.github/workflows/push-release-info-to-aws-s3.yml@<version>
+  uses: Particular/deployment-workflows/.github/workflows/push-release-info-to-aws-s3.yml@<version-of-the-workflow>
   with:
     version: 1.2.3
     product: ServiceInsight
@@ -225,7 +225,7 @@ push-s3:
 ```yaml
 # Full
 push-s3:
-  uses: Particular/deployment-workflows/.github/workflows/push-release-info-to-aws-s3.yml@<version>
+  uses: Particular/deployment-workflows/.github/workflows/push-release-info-to-aws-s3.yml@<version-of-the-workflow>
   with:
     version: 1.2.3          # release tag
     product: ServiceInsight # file name: serviceinsight.txt
@@ -246,7 +246,7 @@ Copies images from GitHub Container Registry to Docker Hub with the tags from [d
 ```yaml
 # Basic
 push-docker:
-  uses: Particular/deployment-workflows/.github/workflows/push-docker-images.yml@<version>
+  uses: Particular/deployment-workflows/.github/workflows/push-docker-images.yml@<version-of-the-workflow>
   with:
     version: 1.2.3
   secrets: inherit # needs DOCKERHUB_USERNAME and DOCKERHUB_TOKEN
@@ -255,7 +255,7 @@ push-docker:
 ```yaml
 # Full
 push-docker:
-  uses: Particular/deployment-workflows/.github/workflows/push-docker-images.yml@<version>
+  uses: Particular/deployment-workflows/.github/workflows/push-docker-images.yml@<version-of-the-workflow>
   with:
     version: 1.2.3
     image-config-file: .github/docker-images.json # default shown
