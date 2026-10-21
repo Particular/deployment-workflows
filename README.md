@@ -23,11 +23,11 @@ jobs:
 - Scripts run in `pwsh`.
 - A release's `version` is its tag (e.g. `1.2.3`), unless noted.
 
----
 
-# Actions
 
-## create-draft-release-with-assets
+## Actions
+
+### create-draft-release-with-assets
 
 Creates a draft GitHub release for the current `github.ref_name` and attaches every file found under the given paths.
 
@@ -50,7 +50,7 @@ Creates a draft GitHub release for the current `github.ref_name` and attaches ev
 - run: echo "${{ steps.draft.outputs.assets }}"            # comma-separated list of attached files
 ```
 
-## push-nuget-packages
+### push-nuget-packages
 
 Downloads the `.nupkg` assets from a release and pushes them to the NuGet feed for the target environment (duplicates are skipped).
 
@@ -84,7 +84,7 @@ Downloads the `.nupkg` assets from a release and pushes them to the NuGet feed f
     dry-run: false                       # default false
 ```
 
-## determine-image-tags
+### determine-image-tags
 
 Works out which Docker tags a version should get (`1.2.3`, `1.2`, `1`, `latest`) by comparing it with the repo's published releases.
 
@@ -102,11 +102,9 @@ Works out which Docker tags a version should get (`1.2.3`, `1.2`, `1`, `latest`)
     echo "${{ steps.tags.outputs.prerelease }}"  # label, empty when stable
 ```
 
----
+## Workflows
 
-# Workflows
-
-## verify-authorized-user
+### verify-authorized-user
 
 Fails unless the triggering user (`github.actor`) is listed in the `AUTHORIZED_RELEASE_USERS` variable. Use as a gate with `needs:`.
 
@@ -123,7 +121,7 @@ jobs:
 
 The `actor` and `authorized-users` inputs are test-only overrides and fail outside this repository.
 
-## generate-release-notes
+### generate-release-notes
 
 Fills the draft release's notes from the closed issues of the milestone named after the version (via GitReleaseManager).
 
@@ -149,7 +147,7 @@ generate-notes:
     dry-run: false # default false
 ```
 
-## publish-release-notes
+### publish-release-notes
 
 Publishes the draft release for `version` (via GitReleaseManager).
 
@@ -172,7 +170,7 @@ publish:
     dry-run: false # default false
 ```
 
-## push-powershell-packages
+### push-powershell-packages
 
 Downloads matching release assets and publishes them to the PowerShell gallery for the target environment.
 
@@ -209,7 +207,7 @@ push-ps:
   secrets: inherit
 ```
 
-## push-release-info-to-aws-s3
+### push-release-info-to-aws-s3
 
 Uploads a release's info (tag, URL, publish date, `.exe` assets) as JSON to `s3://<bucket>/<product lowercase>.txt`, then verifies the upload.
 
@@ -238,7 +236,7 @@ push-s3:
   secrets: inherit # AWS_ACCESSKEY and AWS_SECRETKEY
 ```
 
-## push-docker-images
+### push-docker-images
 
 Copies images from GitHub Container Registry to Docker Hub with the tags from [determine-image-tags](#determine-image-tags), and updates the Docker Hub descriptions when the version is the new `latest`.
 
