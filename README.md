@@ -23,8 +23,6 @@ jobs:
 - Scripts run in `pwsh`.
 - A release's `version` is its tag (e.g. `1.2.3`), unless noted.
 
-
-
 ## Actions
 
 ### create-draft-release-with-assets
