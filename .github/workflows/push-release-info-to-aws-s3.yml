@@ -39,35 +39,33 @@ jobs:
             $product = "${{ inputs.product }}"
 
             try {
-                $response = Invoke-WebRequest -Uri https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ inputs.version }} -UseBasicParsing
+                $response = Invoke-WebRequest -Uri https://api.github.com/repos/${{ github.repository }}/releases -UseBasicParsing
             }
             catch {
-                Write-Error "Failed to fetch release ${{ inputs.version }}: $($_.Exception.Message)"
+                Write-Error "Failed to fetch releases: $($_.Exception.Message)"
                 exit 1
             }
 
-            # Filter and rework the JSON
+            # Same list the Octopus step produced: stable X.Y.Z releases that have an exe, newest first
             $obj = ConvertFrom-Json $response.Content -ErrorAction Stop
 
-            if ($obj.Draft -or $obj.Prerelease) {
-                Write-Error "Release $($obj.tag_name) is a draft or prerelease, aborting"
+            $newobj = @($obj |
+                Where-Object Draft -eq $false |
+                Where-Object Prerelease -eq $false |
+                Where-Object tag_name -match '^\d+\.\d+\.\d+$' |
+                ForEach-Object {
+                    $release = $_ | Select-Object -Property @{Name="tag";Expression={$_."tag_name"}}, @{Name="release";Expression={$_."html_url"}}, @{Name="published";Expression={$_."published_at"}}, assets
+                    $release.assets = @($release.assets | Where-Object name -Like "*.exe" | Select-Object -Property name, size, @{Name="download";Expression={$_."browser_download_url"}})
+                    $release
+                } |
+                Where-Object { $_.assets.Count -gt 0 } |
+                Sort-Object -Descending { [Version]$_.tag })
+
+            if (-not ($newobj | Where-Object tag -eq "${{ inputs.version }}")) {
+                Write-Error "Release ${{ inputs.version }} is not a stable release with exe assets, aborting"
                 exit 1
             }
 
-            $release = $obj | Select-Object -Property @{Name="tag";Expression={$_."tag_name"}}, @{Name="release";Expression={$_."html_url"}}, @{Name="published";Expression={$_."published_at"}}, assets
-            if (-not ($release.tag -match '^\d+\.\d+\.\d+$')) {
-                Write-Error "Release $($release.tag) has an invalid tag format, aborting"
-                exit 1
-            }
-
-            $release.assets = @($release.assets | Where-Object name -Like "*.exe" | Select-Object -Property name, size, @{Name="download";Expression={$_."browser_download_url"}})
-
-            if (-not $release.assets) {
-                Write-Error "Release $($release.tag) has no exe assets, aborting"
-                exit 1
-            }
-
-            $newobj = @($release)
             $json = ConvertTo-Json $newobj -Depth 100 -ErrorAction Stop
 
             # Write JSON to S3
