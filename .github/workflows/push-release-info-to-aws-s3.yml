@@ -46,7 +46,6 @@ jobs:
                 exit 1
             }
 
-            # Same list the Octopus step produced: stable X.Y.Z releases that have an exe, newest first
             $obj = ConvertFrom-Json $response.Content -ErrorAction Stop
 
             $newobj = @($obj |
