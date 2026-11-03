@@ -36,7 +36,7 @@ runs:
           throw "api-key is required."
         }
     - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v6.0.0
+      uses: actions/setup-dotnet@v6.1.0
       with:
         dotnet-version: latest
     - name: Download assets from draft release
