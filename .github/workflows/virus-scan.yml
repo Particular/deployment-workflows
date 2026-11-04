@@ -1,0 +1,28 @@
+name: Virus scan
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+      dry-run:
+        type: boolean
+        default: false
+jobs:
+  virus-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dry run
+        if: ${{ inputs.dry-run }}
+        shell: pwsh
+        run: Write-Output "[dry-run] Would run Particular/virus-scan-action on release '${{ inputs.version }}' of ${{ github.repository_owner }}/${{ github.event.repository.name }}."
+      - name: Scan release for viruses
+        if: ${{ !inputs.dry-run }}
+        uses: Particular/virus-scan-action@main
+        with:
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.repository.name }}
+          tag: ${{ inputs.version }}
+          github-access-token: ${{ secrets.GITHUB_TOKEN }}
+          slack-token: ${{ secrets.SLACK_TOKEN }}
+          slack-channel: ${{ vars.VIRUS_REPORTING_SLACK_CHANNEL }}
