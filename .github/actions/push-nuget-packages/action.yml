@@ -8,7 +8,7 @@ inputs:
     required: true
     description: The deployment environment that the packages are being published for. Should be 'staging' or 'production'
   api-key:
-    required: true
+    required: false
     description: API key used to authenticate the staging push
   exclude-package-pattern:
     required: false
@@ -32,8 +32,8 @@ runs:
         if ($validDeployEnvironments -notcontains $deployEnvironment) {
           throw "deploy-environment must be one of: $($validDeployEnvironments -join ', '). Got '$releaseState'."
         }
-        if (-not "${{ inputs.api-key }}") {
-          throw "api-key is required."
+        if (($deployEnvironment -eq 'staging') -and (-not "${{ inputs.api-key }}")) {
+          throw "api-key is required when deploy-environment is 'staging'"
         }
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v6.1.0
