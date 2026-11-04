@@ -15,6 +15,7 @@ jobs:
           - scenario: missing version
             version: ''
             deploy-environment: staging
+            api-key: some-key
             expect-failure: true
           - scenario: missing deploy-environment
             version: 1.2.3
@@ -27,6 +28,11 @@ jobs:
           - scenario: missing api-key
             version: 1.2.3
             deploy-environment: staging
+            expect-failure: true
+          - scenario: api-key passed for production
+            version: 1.2.3
+            deploy-environment: production
+            api-key: some-key
             expect-failure: true
           - scenario: valid (staging)
             version: 1.2.3
