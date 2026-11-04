@@ -15,22 +15,18 @@ jobs:
           - scenario: missing version
             version: ''
             deploy-environment: staging
-            api-key: some-key
             expect-failure: true
           - scenario: missing deploy-environment
             version: 1.2.3
             deploy-environment: ''
-            api-key: some-key
             expect-failure: true
           - scenario: invalid deploy-environment
             version: 1.2.3
             deploy-environment: not-a-valid-value
-            api-key: some-key
             expect-failure: true
           - scenario: missing api-key
             version: 1.2.3
             deploy-environment: staging
-            api-key: ''
             expect-failure: true
           - scenario: valid (staging)
             version: 1.2.3
@@ -40,7 +36,6 @@ jobs:
           - scenario: valid (production)
             version: 1.2.3
             deploy-environment: production
-            api-key: some-key
             expect-failure: false
     steps:
       - name: Checkout
