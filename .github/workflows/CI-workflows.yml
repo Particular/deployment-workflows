@@ -48,10 +48,16 @@ jobs:
       bucket: test-bucket
       dry-run: true
     secrets: inherit
+  test-virus-scan:
+    uses: ./.github/workflows/virus-scan.yml
+    with:
+      version: 1.2.3
+      dry-run: true
+    secrets: inherit
   validate-workflow-tests:
     # So we can add new tests without having to update branch protection rules
     name: Validate workflow test results
-    needs: [test-push-docker-images, test-verify-authorized-user, test-generate-release-notes, test-publish-release-notes, test-push-powershell-packages, test-push-release-info-to-aws-s3]
+    needs: [test-push-docker-images, test-verify-authorized-user, test-generate-release-notes, test-publish-release-notes, test-push-powershell-packages, test-push-release-info-to-aws-s3, test-virus-scan]
     if: always()
     runs-on: ubuntu-latest
     steps:
