@@ -274,3 +274,30 @@ Image config file - a non-empty JSON array; `name` is both the GHCR image and th
   }
 ]
 ```
+
+### virus-scan
+
+Scans a published release's assets for viruses (via [Particular/virus-scan-action](https://github.com/Particular/virus-scan-action)) and reports the result to Slack.
+
+**Assumes:**
+- The release tagged `version` exists in the calling repository.
+- `SLACK_TOKEN` secret and `VIRUS_REPORTING_SLACK_CHANNEL` variable are available to the caller.
+
+```yaml
+# Basic
+virus-scan:
+  uses: Particular/deployment-workflows/.github/workflows/virus-scan.yml@<version-of-the-workflow>
+  with:
+    version: 1.2.3
+  secrets: inherit # needs SLACK_TOKEN
+```
+
+```yaml
+# Full
+virus-scan:
+  uses: Particular/deployment-workflows/.github/workflows/virus-scan.yml@<version-of-the-workflow>
+  with:
+    version: 1.2.3 # release tag
+    dry-run: false # default false
+  secrets: inherit # SLACK_TOKEN
+```
